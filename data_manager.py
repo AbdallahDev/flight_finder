@@ -20,11 +20,11 @@ def sheet_data():
 
 class DataManager:
     def __init__(self):
-        self.__rows = sheet_data()
+        self.rows = sheet_data()
         self.store_codes()
 
     def store_codes(self):
-        rows = self.__rows
+        rows = self.rows
         flight_data = FlightData()
         for row in rows:
             if row['iataCode'] == "":
