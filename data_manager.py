@@ -21,9 +21,9 @@ def sheet_data():
 class DataManager:
     def __init__(self):
         self.rows = sheet_data()
-        self.store_codes()
+        self.__store_codes()
 
-    def store_codes(self):
+    def __store_codes(self):
         rows = self.rows
         flight_data = FlightData()
         for row in rows:
