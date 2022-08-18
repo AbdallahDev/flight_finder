@@ -21,6 +21,7 @@ class FlightData:
             'locale': LOCALE,
             'location_types': LOCATION_TYPES,
             'limit': LIMIT, }
+        self.good_deals = []
 
     def city_code(self, city: str) -> str:
         self.__params.update({'term': city})
@@ -57,18 +58,21 @@ class FlightData:
             'locale': 'en',
             'vehicle_type': 'aircraft',
             'limit': 500,
+            'price_from': 10,
+            'price_to': 500,
         }
 
         headers = {
             'apikey': "T4vxrX-iACjahtWNkArvRggdEENx2zFk",
             "accept": "application/json"
         }
-        codes = [row['iataCode'] for row in rows]
-        for code in codes:
-            params['fly_to'] = code
+        # codes = [row['iataCode'] for row in rows]
+        for row in rows:
+            params['fly_to'] = row['iataCode']
             params['date_from'] = datetime.date.today() + datetime.timedelta(days=1)
             params['return_from'] = datetime.date.today() + datetime.timedelta(weeks=4)
             params['return_to'] = datetime.date.today() + datetime.timedelta(weeks=4)
+            params['price_to'] = row['lowestPrice']
             req = requests.get(
                 url=end_point,
                 params=params,
@@ -77,5 +81,19 @@ class FlightData:
             data = req.json()
             prices = [flight['price'] for flight in data['data']]
             min_price = min(prices)
-            # if min_price <= ro
-            print(f"min price: {min_price}")
+            if min_price <= row['lowestPrice']:
+                for info in data['data']:
+                    if info['price'] == min_price:
+                        self.good_deals.append(info)
+        print(self.good_deals)
+        # for flight in self.good_deals:
+        #     params['fly_to'] = flight['iataCode']
+        #     params['date_from'] = datetime.date.today() + datetime.timedelta(days=1)
+        #     params['return_from'] = datetime.date.today() + datetime.timedelta(weeks=4)
+        #     params['return_to'] = datetime.date.today() + datetime.timedelta(weeks=4)
+        #     req = requests.get(
+        #         url=end_point,
+        #         params=params,
+        #         headers=headers
+        #     )
+        #     data = req.json()
