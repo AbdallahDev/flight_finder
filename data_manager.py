@@ -4,31 +4,48 @@ import requests as requests
 
 from flight_data import FlightData
 
-SHEET_ENDPOINT = os.environ['SHEET_ENDPOINT']
-HEADERS = {"Authorization": "Bearer " + os.environ['SHEET_APIKEY']}
+ENDPOINT = os.environ['ENDPOINT_SHEETY']
+API_KEY = os.environ['APIKEY_SHEETY']
+HEADERS = {"Authorization": "Bearer " + API_KEY}
 
 
-def sheet_data():
-    req = requests.get(url=SHEET_ENDPOINT, headers=HEADERS)
-    req.raise_for_status()
+def code_dose_not_exist(code: str) -> bool:
+    if code.strip() == "":
+        return True
 
-    data = req.json()
-    rows: list = data['prices']
-
-    return rows
+    return False
 
 
 class DataManager:
     def __init__(self):
-        self.rows = sheet_data()
-        self.__store_codes()
+        self.flight_data = FlightData(row_data={})
+        self.sheet_rows()
 
-    def __store_codes(self):
-        rows = self.rows
-        flight_data = FlightData()
-        for row in rows:
-            if row['iataCode'] == "":
-                code = flight_data.city_code(city=row['city'])
-                body = {"price": {"iataCode": code}}
-                req = requests.put(url=SHEET_ENDPOINT + f"/{row['id']}", headers=HEADERS, json=body)
-                req.raise_for_status()
+    def sheet_rows(self):
+        req = requests.get(url=ENDPOINT, headers=HEADERS)
+        req.raise_for_status()
+        data = req.json()
+        rows: list = data['prices']
+
+        self.loop_rows(data_rows=rows)
+
+    def loop_rows(self, data_rows: list):
+        for data_row in data_rows:
+            self.flight_data = FlightData(row_data=data_row)
+
+            if code_dose_not_exist(code=data_row['iataCode']):
+                code = self.store_code(row_id=data_row['id'])
+                data_row.update({'iataCode': code})
+                self.flight_data = FlightData(row_data=data_row)
+
+            # here it means the city iataCode is empty
+            # So I should get the lowest price flight for that city
+            self.flight_data.lowest_price()
+
+    def store_code(self, row_id):
+        code = self.flight_data.city_code()
+        body = {"price": {"iataCode": code}}
+        req = requests.put(url=ENDPOINT + f"/{row_id}", headers=HEADERS, json=body)
+        req.raise_for_status()
+
+        return code

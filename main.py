@@ -1,7 +1,6 @@
 from data_manager import DataManager
-from flight_data import FlightData
+from notification import Notification
 
 data_manager = DataManager()
 
-flight_data = FlightData()
-flight_data.lowest_price(rows=data_manager.rows)
+notification = Notification()

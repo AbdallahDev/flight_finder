@@ -7,93 +7,66 @@ import requests
 # from data_manager import DataManager
 
 # /locations/query
-FLIGHT_ENDPOINT = os.environ['FLIGHT_ENDPOINT']
-SEARCH_ENDPOINT = '/v2/search'
-HEADERS = {"accept": "application/json", "apikey": os.environ['FLIGHT_APIKEY']}
+ENDPOINT = os.environ['ENDPOINT_TEQUILA']
+SEARCH_API = 'v2/search'
+LOCATION_API = 'locations/query'
+API_KEY = os.environ['APIKEY_TEQUILA']
+HEADERS = {"accept": "application/json", "apikey": API_KEY}
 LOCALE = 'en-US'
 LOCATION_TYPES = 'city'
 LIMIT = 1
+LOCATION_API_PARAMS = {
+    'locale': LOCALE,
+    'location_types': LOCATION_TYPES,
+    'limit': LIMIT,
+}
+GOOD_DEALS = []
 
 
 class FlightData:
-    def __init__(self):
-        self.__params = {
-            'locale': LOCALE,
-            'location_types': LOCATION_TYPES,
-            'limit': LIMIT, }
-        self.good_deals = []
+    def __init__(self, row_data: dict):
+        self.row_data = row_data
 
-    def city_code(self, city: str) -> str:
-        self.__params.update({'term': city})
-        req = requests.get(url=FLIGHT_ENDPOINT,
-                           headers=HEADERS, params=self.__params)
+    def city_code(self) -> str:
+        LOCATION_API_PARAMS.update({'term': self.row_data['city']})
+        req = requests.get(url=ENDPOINT + LOCATION_API,
+                           headers=HEADERS, params=LOCATION_API_PARAMS)
         req.raise_for_status()
-        # the datatype of data variable is dict
         data = req.json()
         code = data['locations'][0]['code']
 
         return code
 
-    def lowest_price(self, rows: list):
-        end_point = 'https://tequila-api.kiwi.com/v2/search'
-
-        params = {
-            'fly_from': 'AMM',
-            'fly_to': 'DOH',
-            'date_from': '17/08/2022',
-            'date_to': '27/09/2022',
-            'return_from': '03/09/2022',
-            'return_to': '03/09/2022',
-            'nights_in_dst_from': 2,
-            'nights_in_dst_to': 2,
-            'flight_type': 'round',
-            'one_for_city': 0,
-            'one_per_date': 0,
-            'adults': 1,
-            'children': 0,
-            'only_working_days': 'false',
-            'only_weekends': 'false',
-            'partner_market': 'us',
-            'curr': 'USD',
-            'locale': 'en',
-            'vehicle_type': 'aircraft',
-            'limit': 500,
-            'price_from': 10,
-            'price_to': 500,
-        }
-
-        headers = {
-            'apikey': "T4vxrX-iACjahtWNkArvRggdEENx2zFk",
-            "accept": "application/json"
-        }
-        # codes = [row['iataCode'] for row in rows]
-        for row in rows:
-            params['fly_to'] = row['iataCode']
-            params['date_from'] = datetime.date.today() + datetime.timedelta(days=1)
-            params['return_from'] = datetime.date.today() + datetime.timedelta(weeks=4)
-            params['return_to'] = datetime.date.today() + datetime.timedelta(weeks=4)
-            params['price_to'] = row['lowestPrice']
-            req = requests.get(
-                url=end_point,
-                params=params,
-                headers=headers
-            )
-            data = req.json()
-            prices = [flight['price'] for flight in data['data']]
-            min_price = min(prices)
-            if min_price <= row['lowestPrice']:
-                for info in data['data']:
-                    if info['price'] == min_price:
-                        self.good_deals.append(info)
-        print(self.good_deals)
-        # for flight in self.good_deals:
-        #     params['fly_to'] = flight['iataCode']
-        #     params['date_from'] = datetime.date.today() + datetime.timedelta(days=1)
-        #     params['return_from'] = datetime.date.today() + datetime.timedelta(weeks=4)
-        #     params['return_to'] = datetime.date.today() + datetime.timedelta(weeks=4)
-        #     req = requests.get(
-        #         url=end_point,
-        #         params=params,
-        #         headers=headers
-        #     )
-        #     data = req.json()
+    def lowest_price(self):
+        date_from = datetime.date.today() + datetime.timedelta(days=1)
+        date_to = date_from + datetime.timedelta(days=16)
+        return_from = date_to + datetime.timedelta(days=16)
+        return_to = return_from + datetime.timedelta(days=16)
+        params = {'fly_from': 'AMM', 'fly_to': self.row_data['iataCode'],
+                  'date_from': date_from, 'date_to': date_to,
+                  'return_from': return_from,
+                  'return_to': return_to,
+                  'flight_type': 'round',
+                  'one_for_city': 1,
+                  'vehicle_type': 'aircraft',
+                  'curr': 'JOD',
+                  'adults': 1,
+                  }
+        req = requests.get(
+            url=ENDPOINT + SEARCH_API,
+            params=params,
+            headers=HEADERS
+        )
+        req.raise_for_status()
+        data = req.json()
+        flight = {}
+        try:
+            flight = data['data'][0]
+        except IndexError:
+            # print(f'No flights available for {self.row_data["city"]}')
+            pass
+        else:
+            price = flight['price']
+            print(price, self.row_data['city'])
+            if price <= self.row_data['lowestPrice']:
+                GOOD_DEALS.append(flight)
