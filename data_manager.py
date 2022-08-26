@@ -16,6 +16,29 @@ def code_dose_not_exist(code: str) -> bool:
     return False
 
 
+def new_user():
+    f_name = input("Insert Your name: ")
+    email = input("Insert Your email: ")
+
+    endpoint = 'https://api.sheety.co/4020d66351458a3fdf604e02fd2d3672/users/emails'
+    body = {
+        'email': {
+            "firstName": f_name,
+            "email": email,
+        }
+    }
+    req = requests.post(url=endpoint, json=body)
+    req.raise_for_status()
+
+
+def users() -> list:
+    endpoint = 'https://api.sheety.co/4020d66351458a3fdf604e02fd2d3672/users/emails'
+    req = requests.get(url=endpoint)
+    req.raise_for_status()
+    emails = req.json()['emails']
+    return emails
+
+
 class DataManager:
     def __init__(self):
         self.flight_data = FlightData(row_data={})
@@ -49,3 +72,6 @@ class DataManager:
         req.raise_for_status()
 
         return code
+
+    # users data manager
+
